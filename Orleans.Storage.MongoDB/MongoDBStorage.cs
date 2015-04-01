@@ -1,18 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
-using MongoDBBson = MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
+using MongoDB.Driver.Linq;
 using Newtonsoft.Json;
 using Orleans.Providers;
 using Orleans.Runtime;
-using Orleans.Runtime.Configuration;
-using JsonConvert = Newtonsoft.Json.JsonConvert;
+using MongoDBBson = MongoDB.Bson;
+using System.Collections.Concurrent;
 
 
 namespace Orleans.Storage.MongoDB
@@ -23,7 +21,7 @@ namespace Orleans.Storage.MongoDB
     /// <remarks>
     /// The storage provider should be included in a deployment by adding this line to the Orleans server configuration file:
     /// 
-    ///      <Provider Type="Samples.StorageProviders.MongoDBStorage" Name="MongoDBStore" Database="db-name" ConnectionString="mongodb://YOURHOSTNAME:27017/" />
+    ///      <Provider Type="Orleans.Storage.MongoDB.MongoDBStorage" Name="MongoDBStore" Database="db-name" ConnectionString="mongodb://YOURHOSTNAME:27017/" />
     /// and this line to any grain that uses it:
     /// 
     ///     [StorageProvider(ProviderName = "MongoDBStore")]
@@ -71,7 +69,8 @@ namespace Orleans.Storage.MongoDB
             this.Name = name;
             this.ConnectionString = config.Properties["ConnectionString"];
             this.Database = config.Properties["Database"];
-            var useGuidAsStorageKeyString = config.Properties["UseGuidAsStorageKey"];
+            string useGuidAsStorageKeyString;
+            config.Properties.TryGetValue("UseGuidAsStorageKey", out useGuidAsStorageKeyString);
             var useGuidAsStorageKey = true;//default is true
 
             if (!string.IsNullOrWhiteSpace(useGuidAsStorageKeyString))
@@ -174,6 +173,7 @@ namespace Orleans.Storage.MongoDB
     /// </summary>
     internal class GrainStateMongoDataManager
     {
+        private static ConcurrentDictionary<string, bool> registerIndexMap = new ConcurrentDictionary<string, bool>();
         /// <summary>
         /// Constructor
         /// </summary>
@@ -211,18 +211,19 @@ namespace Orleans.Storage.MongoDB
         /// <returns>Completion promise for this operation.</returns>
         public async Task<string> ReadAsync(string collectionName, string key)
         {
-            var collection = _database.GetCollection<BsonDocument>(collectionName);
+            var collection = await GetCollection(collectionName);
+
             if (collection == null)
                 return null;
 
-            var query = BsonDocument.Parse("{key:\"" + key + "\"}");
+            var query = BsonDocument.Parse("{__key:\"" + key + "\"}");
             var existing = (await (await collection.FindAsync(query)).ToListAsync()).FirstOrDefault();
 
             if (existing == null)
                 return null;
 
             existing.Remove("_id");
-            existing.Remove("key");
+            existing.Remove("__key");
 
             return existing.ToJson();
         }
@@ -236,13 +237,15 @@ namespace Orleans.Storage.MongoDB
         /// <returns>Completion promise for this operation.</returns>
         public async Task WriteAsync(string collectionName, string key, IGrainState entityData)
         {
-            var collection = _database.GetCollection<BsonDocument>(collectionName);
+            var collection = await GetCollection(collectionName);
 
-            var query = BsonDocument.Parse("{key:\"" + key + "\"}");
+            var query = BsonDocument.Parse("{__key:\"" + key + "\"}");
             var existing = (await (await collection.FindAsync(query)).ToListAsync()).FirstOrDefault();
 
-            var doc = entityData.ToBsonDocument();
-            doc["key"] = key;
+            var json = JsonConvert.SerializeObject(entityData);
+
+            var doc = BsonSerializer.Deserialize<BsonDocument>(json);
+            doc["__key"] = key;
 
             if (existing != null)
             {
@@ -255,6 +258,25 @@ namespace Orleans.Storage.MongoDB
                 await collection.InsertOneAsync(doc);
             }
         }
+
+        private async Task<IMongoCollection<MongoDBBson.BsonDocument>> GetCollection(string name)
+        {
+            var collection = _database.GetCollection<MongoDBBson.BsonDocument>(name);
+
+            if (!registerIndexMap.ContainsKey(name))
+            {
+                var indexes = await (await collection.Indexes.ListAsync()).ToListAsync();
+                if (indexes.Count(index => index["name"] == "__key_1") == 0)
+                {
+                    var keys = Builders<MongoDBBson.BsonDocument>.IndexKeys.Ascending("__key");
+                    await collection.Indexes.CreateOneAsync(keys,
+                        new CreateIndexOptions() { Unique = true, Version = 1 });
+                }
+                registerIndexMap.TryAdd(name, true);
+            }
+            return collection;
+        }
+
         private readonly IMongoDatabase _database;
     }
 }
