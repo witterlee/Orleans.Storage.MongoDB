@@ -30,6 +30,11 @@ namespace Orleans.Storage.MongoDB
     /// </remarks>
     public class MongoDBStorage : IStorageProvider
     {
+        private const string DATA_CONNECTION_STRING = "ConnectionString";
+        private const string DATABASE_NAME_PROPERTY = "Database";
+        //private const string DELETE_ON_CLEAR_PROPERTY = "DeleteStateOnClear";
+        private const string USE_GUID_AS_STORAGE_KEY = "UseGuidAsStorageKey";
+
         /// <summary>
         /// Logger object
         /// </summary>
@@ -67,19 +72,20 @@ namespace Orleans.Storage.MongoDB
             Log = providerRuntime.GetLogger(this.GetType().FullName);
 
             this.Name = name;
-            this.ConnectionString = config.Properties["ConnectionString"];
-            this.Database = config.Properties["Database"];
-            string useGuidAsStorageKeyString;
-            config.Properties.TryGetValue("UseGuidAsStorageKey", out useGuidAsStorageKeyString);
-            var useGuidAsStorageKey = true;//default is true
 
-            if (!string.IsNullOrWhiteSpace(useGuidAsStorageKeyString))
-                Boolean.TryParse(useGuidAsStorageKeyString, out useGuidAsStorageKey);
+            if (!config.Properties.ContainsKey(DATA_CONNECTION_STRING) ||
+                !config.Properties.ContainsKey(DATABASE_NAME_PROPERTY))
+            {
+                throw new ArgumentException("ConnectionString Or Database property not set");
+            }
 
-            this.UseGuidAsStorageKey = useGuidAsStorageKey;
-            if (string.IsNullOrWhiteSpace(ConnectionString))
-                throw new ArgumentException("ConnectionString property not set");
-            if (string.IsNullOrWhiteSpace(Database)) throw new ArgumentException("Database property not set");
+            this.ConnectionString = config.Properties[DATA_CONNECTION_STRING];
+            this.Database = config.Properties[DATABASE_NAME_PROPERTY];
+
+            this.UseGuidAsStorageKey = config.Properties.ContainsKey(USE_GUID_AS_STORAGE_KEY) &&
+                                       "true".Equals(config.Properties[USE_GUID_AS_STORAGE_KEY],
+                                           StringComparison.OrdinalIgnoreCase);
+
             DataManager = new GrainStateMongoDataManager(Database, ConnectionString);
 
             return TaskDone.Done;
@@ -217,15 +223,18 @@ namespace Orleans.Storage.MongoDB
                 return null;
 
             var query = BsonDocument.Parse("{__key:\"" + key + "\"}");
-            var existing = (await (await collection.FindAsync(query)).ToListAsync()).FirstOrDefault();
+            using (var cursor = await collection.FindAsync(query))
+            {
+                var existing = (await cursor.ToListAsync()).FirstOrDefault();
 
-            if (existing == null)
-                return null;
+                if (existing == null)
+                    return null;
 
-            existing.Remove("_id");
-            existing.Remove("__key");
+                existing.Remove("_id");
+                existing.Remove("__key");
 
-            return existing.ToJson();
+                return existing.ToJson();
+            }
         }
 
         /// <summary>
@@ -240,22 +249,26 @@ namespace Orleans.Storage.MongoDB
             var collection = await GetCollection(collectionName);
 
             var query = BsonDocument.Parse("{__key:\"" + key + "\"}");
-            var existing = (await (await collection.FindAsync(query)).ToListAsync()).FirstOrDefault();
 
-            var json = JsonConvert.SerializeObject(entityData);
-
-            var doc = BsonSerializer.Deserialize<BsonDocument>(json);
-            doc["__key"] = key;
-
-            if (existing != null)
+            using (var cursor = await collection.FindAsync(query))
             {
-                doc["_id"] = existing["_id"];
-                await collection.ReplaceOneAsync(query, doc);
+                var existing = (await cursor.ToListAsync()).FirstOrDefault();
 
-            }
-            else
-            {
-                await collection.InsertOneAsync(doc);
+                var json = JsonConvert.SerializeObject(entityData);
+
+                var doc = BsonSerializer.Deserialize<BsonDocument>(json);
+                doc["__key"] = key;
+
+                if (existing != null)
+                {
+                    doc["_id"] = existing["_id"];
+                    await collection.ReplaceOneAsync(query, doc);
+
+                }
+                else
+                {
+                    await collection.InsertOneAsync(doc);
+                }
             }
         }
 
@@ -265,14 +278,17 @@ namespace Orleans.Storage.MongoDB
 
             if (!registerIndexMap.ContainsKey(name))
             {
-                var indexes = await (await collection.Indexes.ListAsync()).ToListAsync();
-                if (indexes.Count(index => index["name"] == "__key_1") == 0)
+                using (var cursor = await collection.Indexes.ListAsync())
                 {
-                    var keys = Builders<MongoDBBson.BsonDocument>.IndexKeys.Ascending("__key");
-                    await collection.Indexes.CreateOneAsync(keys,
-                        new CreateIndexOptions() { Unique = true, Version = 1 });
+                    var indexes = await cursor.ToListAsync();
+                    if (indexes.Count(index => index["name"] == "__key_1") == 0)
+                    {
+                        var keys = Builders<MongoDBBson.BsonDocument>.IndexKeys.Ascending("__key");
+                        await collection.Indexes.CreateOneAsync(keys,
+                            new CreateIndexOptions() { Unique = true, Version = 1 });
+                    }
+                    registerIndexMap.TryAdd(name, true);
                 }
-                registerIndexMap.TryAdd(name, true);
             }
             return collection;
         }
