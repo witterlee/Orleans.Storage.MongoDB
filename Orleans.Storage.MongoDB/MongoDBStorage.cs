@@ -180,6 +180,11 @@ namespace Orleans.Storage.MongoDB
     internal class GrainStateMongoDataManager
     {
         private static ConcurrentDictionary<string, bool> registerIndexMap = new ConcurrentDictionary<string, bool>();
+
+        private static JsonSerializerSettings setting = new JsonSerializerSettings()
+        {
+            NullValueHandling = NullValueHandling.Ignore
+        };
         /// <summary>
         /// Constructor
         /// </summary>
@@ -254,7 +259,7 @@ namespace Orleans.Storage.MongoDB
             {
                 var existing = (await cursor.ToListAsync()).FirstOrDefault();
 
-                var json = JsonConvert.SerializeObject(entityData);
+                var json = JsonConvert.SerializeObject(entityData, setting);
 
                 var doc = BsonSerializer.Deserialize<BsonDocument>(json);
                 doc["__key"] = key;
