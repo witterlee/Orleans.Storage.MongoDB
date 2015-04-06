@@ -82,7 +82,7 @@ namespace Orleans.Storage.MongoDB
             this.ConnectionString = config.Properties[DATA_CONNECTION_STRING];
             this.Database = config.Properties[DATABASE_NAME_PROPERTY];
 
-            this.UseGuidAsStorageKey = config.Properties.ContainsKey(USE_GUID_AS_STORAGE_KEY) &&
+            this.UseGuidAsStorageKey = !config.Properties.ContainsKey(USE_GUID_AS_STORAGE_KEY) ||
                                        "true".Equals(config.Properties[USE_GUID_AS_STORAGE_KEY],
                                            StringComparison.OrdinalIgnoreCase);
 
