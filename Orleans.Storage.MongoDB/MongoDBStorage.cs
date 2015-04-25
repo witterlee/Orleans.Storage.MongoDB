@@ -11,6 +11,7 @@ using Orleans.Providers;
 using Orleans.Runtime;
 using MongoDBBson = MongoDB.Bson;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 
 namespace Orleans.Storage.MongoDB
@@ -183,7 +184,8 @@ namespace Orleans.Storage.MongoDB
 
         private static JsonSerializerSettings setting = new JsonSerializerSettings()
         {
-            NullValueHandling = NullValueHandling.Ignore
+            NullValueHandling = NullValueHandling.Ignore,
+            Converters = new List<JsonConverter>() { new UnixDateTimeConverter() }
         };
         /// <summary>
         /// Constructor
