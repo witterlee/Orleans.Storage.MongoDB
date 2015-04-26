@@ -169,7 +169,7 @@ namespace Orleans.Storage.MongoDB
         /// <param name="entityData">JSON storage format representaiton of the grain state.</param>
         protected static void ConvertFromStorageFormat(IGrainState grainState, string entityData)
         {
-            object data = JsonConvert.DeserializeObject(entityData, grainState.GetType());
+            object data = JsonConvert.DeserializeObject(entityData, grainState.GetType(), GrainStateMongoDataManager.JsonSetting);
             var dict = ((IGrainState)data).AsDictionary();
             grainState.SetAll(dict);
         }
@@ -182,7 +182,7 @@ namespace Orleans.Storage.MongoDB
     {
         private static ConcurrentDictionary<string, bool> registerIndexMap = new ConcurrentDictionary<string, bool>();
 
-        private static JsonSerializerSettings setting = new JsonSerializerSettings()
+        public static JsonSerializerSettings JsonSetting = new JsonSerializerSettings()
         {
             NullValueHandling = NullValueHandling.Ignore,
             Converters = new List<JsonConverter>() { new UnixDateTimeConverter() }
@@ -261,7 +261,7 @@ namespace Orleans.Storage.MongoDB
             {
                 var existing = (await cursor.ToListAsync()).FirstOrDefault();
 
-                var json = JsonConvert.SerializeObject(entityData, setting);
+                var json = JsonConvert.SerializeObject(entityData, JsonSetting);
 
                 var doc = BsonSerializer.Deserialize<BsonDocument>(json);
                 doc["__key"] = key;

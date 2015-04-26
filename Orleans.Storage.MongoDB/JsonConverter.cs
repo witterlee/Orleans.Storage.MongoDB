@@ -28,8 +28,22 @@ namespace Orleans.Storage.MongoDB
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            long ticks = Convert.ToInt64(reader.Value);
-            return initialTime.AddSeconds(ticks);
-        } 
+            try
+            {
+                long ticks = Convert.ToInt64(reader.Value);
+                return initialTime.AddSeconds(ticks);
+            }
+            catch { }
+
+            try
+            {
+                return Convert.ToDateTime(reader.Value.ToString());
+            }
+            catch { }
+
+            if (objectType == typeof(DateTime?)) return null;
+            else
+                throw new Exception("can not read value from json");
+        }
     }
 }
