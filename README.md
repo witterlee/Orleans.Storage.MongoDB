@@ -15,7 +15,6 @@
     <SeedNode Address="localhost" Port="11111" />
   </Globals>
 </OrleansConfiguration>
-
 ```
 
 If you have MongoDB running on your local machine, then this should work with no modifications.
