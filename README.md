@@ -10,13 +10,18 @@
   <Globals>
     <StorageProviders>
       <Provider Type="Orleans.Storage.MemoryStorage" Name="MemoryStore" />
-     <Provider Type="Orleans.Storage.MongoDB.MongoDBStorage" Name="MongoDBStorage" UseGuidAsStorageKey="True/False" ConfigSectionName="couchbaseClients/couchbaseDataStore" />
+      <Provider Type="Orleans.Storage.MongoDB.MongoDBStorage" Name="MongoDBStorage" Database="Orleans" ConnectionString="mongodb://localhost:27017/" />
     </StorageProviders>
     <SeedNode Address="localhost" Port="11111" />
   </Globals>
 </OrleansConfiguration>
 
 ```
+
+If you have MongoDB running on your local machine, then this should work with no modifications.
+
+If you have MongoDB running on a remote machine, then you will have to update "localhost" to match the machine name.
+
 ###### 2. Code
 ```csharp
  [StorageProvider(ProviderName = "MongoDBStorage")]
