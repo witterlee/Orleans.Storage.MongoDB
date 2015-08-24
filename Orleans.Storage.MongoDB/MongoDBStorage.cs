@@ -33,7 +33,7 @@ namespace Orleans.Storage.MongoDB
     {
         private const string DATA_CONNECTION_STRING = "ConnectionString";
         private const string DATABASE_NAME_PROPERTY = "Database";
-        //private const string DELETE_ON_CLEAR_PROPERTY = "DeleteStateOnClear";
+        private const string DELETE_ON_CLEAR_PROPERTY = "DeleteStateOnClear";
         private const string USE_GUID_AS_STORAGE_KEY = "UseGuidAsStorageKey";
 
         /// <summary>
