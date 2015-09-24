@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 using Newtonsoft.Json;
 using Orleans.Providers;
 using Orleans.Runtime;
@@ -102,6 +100,8 @@ namespace Orleans.Storage.MongoDB
             return TaskDone.Done;
         }
 
+
+
         /// <summary>
         /// Reads persisted state from the backing store and deserializes it into the the target
         /// grain state object.
@@ -110,7 +110,7 @@ namespace Orleans.Storage.MongoDB
         /// <param name="grainReference">Represents the long-lived identity of the grain.</param>
         /// <param name="grainState">A reference to an object to hold the persisted state of the grain.</param>
         /// <returns>Completion promise for this operation.</returns>
-        public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        public async Task ReadStateAsync(string grainType, GrainReference grainReference, GrainState grainState)
         {
             if (DataManager == null) throw new ArgumentException("DataManager property not initialized");
 
@@ -133,7 +133,7 @@ namespace Orleans.Storage.MongoDB
         /// <param name="grainReference">Represents the long-lived identity of the grain.</param>
         /// <param name="grainState">A reference to an object holding the persisted state of the grain.</param>
         /// <returns>Completion promise for this operation.</returns>
-        public Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        public Task WriteStateAsync(string grainType, GrainReference grainReference, GrainState grainState)
         {
             if (DataManager == null) throw new ArgumentException("DataManager property not initialized");
 
@@ -151,7 +151,7 @@ namespace Orleans.Storage.MongoDB
         /// <param name="grainReference">Represents the long-lived identity of the grain.</param>
         /// <param name="grainState">An object holding the persisted state of the grain.</param>
         /// <returns></returns>
-        public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        public Task ClearStateAsync(string grainType, GrainReference grainReference, GrainState grainState)
         {
             if (DataManager == null) throw new ArgumentException("DataManager property not initialized");
 
@@ -167,10 +167,10 @@ namespace Orleans.Storage.MongoDB
         /// </summary>
         /// <param name="grainState">Grain state to be populated for storage.</param>
         /// <param name="entityData">JSON storage format representaiton of the grain state.</param>
-        protected static void ConvertFromStorageFormat(IGrainState grainState, string entityData)
+        protected static void ConvertFromStorageFormat(GrainState grainState, string entityData)
         {
             object data = JsonConvert.DeserializeObject(entityData, grainState.GetType(), GrainStateMongoDataManager.JsonSetting);
-            var dict = ((IGrainState)data).AsDictionary();
+            var dict = ((GrainState)data).AsDictionary();
             grainState.SetAll(dict);
         }
     }
@@ -251,7 +251,7 @@ namespace Orleans.Storage.MongoDB
         /// <param name="key">The grain id string.</param>
         /// <param name="entityData">The grain state data to be stored./</param>
         /// <returns>Completion promise for this operation.</returns>
-        public async Task WriteAsync(string collectionName, string key, IGrainState entityData)
+        public async Task WriteAsync(string collectionName, string key, GrainState entityData)
         {
             var collection = await GetCollection(collectionName);
 
