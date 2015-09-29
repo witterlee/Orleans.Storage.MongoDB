@@ -47,8 +47,8 @@
       <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Orleans, Version=1.0.0.0, Culture=neutral, PublicKeyToken=070f47935e3ed133, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Orleans.Core.1.0.9\lib\net45\Orleans.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Orleans.Core.1.0.10\lib\net45\Orleans.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -66,15 +66,14 @@
   <ItemGroup>
     <None Include=".nuget\NuGet.Config" />
     <None Include=".nuget\NuGet.targets" />
+    <None Include="Build\Build.cmd" />
     <None Include="Orleans.Storage.MongoDB.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".nuget\NuGet.exe" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Build\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
