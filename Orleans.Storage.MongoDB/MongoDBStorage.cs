@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 using Newtonsoft.Json;
 using Orleans.Providers;
 using Orleans.Runtime;
@@ -102,8 +100,7 @@ namespace Orleans.Storage.MongoDB
             DataManager = null;
             return TaskDone.Done;
         }
-
-
+        
         /// <summary>
         /// Reads persisted state from the backing store and deserializes it into the the target
         /// grain state object.
