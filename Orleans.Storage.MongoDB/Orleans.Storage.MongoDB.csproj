@@ -66,7 +66,6 @@
   <ItemGroup>
     <None Include=".nuget\NuGet.Config" />
     <None Include=".nuget\NuGet.targets" />
-    <None Include="Build\Build.cmd" />
     <None Include="Orleans.Storage.MongoDB.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
